@@ -1,0 +1,219 @@
+<html>
+<meta charset="utf-8" />
+
+<head>
+	<script src="/socket.io/socket.io.js"></script>
+	<style>
+		td {
+			height: 300px;
+			width: 200px;
+			border: 1px solid grey;
+			text-align: center;
+			vertical-align: middle;
+			font-size: 1.5em;
+			padding: 0;
+			color: white;
+		}
+
+		body {
+			background-color: #35654d;
+		}
+
+		table {
+			border: 5px solid saddlebrown;
+		}
+	</style>
+</head>
+
+<body>
+	<h2>FIVE-CARD DRAW HEADS-UP</h2>
+	<button id="ready">READY!</button>
+	<div id="swapDiv"></div>
+	<table>
+		<tr id="opponent">
+			<td></td>
+			<td>
+			<td></td>
+			<td></td>
+			</td>
+			<td></td>
+		</tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr></tr>
+		<tr id="player">
+			<td></td>
+			<td>
+			<td></td>
+			<td></td>
+			</td>
+			<td></td>
+		</tr>
+	</table>
+	<div>
+		<input type='text' id='txtmessage' />
+		<ul id='messages'></ul>
+	</div>
+</body>
+
+<script>
+
+	class Card {
+		constructor(rank, suit) {
+			this.rank = rank;
+			this.suit = suit;
+		}
+
+		equals(that) {
+			return (this.rank == that.rank
+				&& this.suit == that.suit);
+		}
+
+		getRank() {
+			return this.rank;
+		}
+
+		getSuit() {
+			return this.suit;
+		}
+
+		get [Symbol.toStringTag]() {
+			return ranks[this.rank] + " " + suits[this.suit];
+		}
+	}
+
+	var suits = ["C", "D", "H", "S"];
+	var ranks = [null, "A", "2", "3", "4", "5", "6",
+		"7", "8", "9", "10", "J", "Q", "K"];
+
+
+	var i = 1;
+	var rozmowa = [];
+	var moves = [];
+	var td = [];
+	var last = 0;
+	var players = [];
+	var winner = undefined;
+	var myHand = [];
+	var swapIndexes = [];
+
+	karta = new Card(11, 1);
+	karta2 = new Card(11, 2)
+
+
+
+
+
+	var nick = prompt("Podaj swój nick");
+
+	var socket = io();
+
+	socket.emit('nick', nick);
+
+	var messages = document.getElementById('messages');
+	var msg_input = document.getElementById('txtmessage');
+	var ready_button = document.getElementById('ready');
+
+	var player_card_row = document.getElementById('player');
+	var player_cards = player_card_row.getElementsByTagName('td')
+
+	var opponent_card_row = document.getElementById('opponent')
+	var opponent_cards = opponent_card_row.getElementsByTagName('td')
+
+	msg_input.focus()
+
+
+
+	// wysyłanie wiadomości o ruchu
+	function ruch() {
+		socket.emit('move', JSON.stringify({ pole: this.pole, pionek: pionek }));
+	}
+
+
+
+	// odbieranie wiadomości 
+	socket.on('chat message', function (data) {
+		messages.innerHTML += "<li>" + data + "</li>";
+	});
+
+	// wysyłanie wiadomości z okienka czatu
+	msg_input.addEventListener('change', function () {
+		socket.emit('chat message', "<b>" + nick + ":</b> " + this.value);
+		this.value = '';
+
+	});
+
+	// // wysyłanie wiadomości o resecie
+	// reset_button.addEventListener('click', function () {
+	// 	socket.emit('reset', "Witaj");
+	// });
+
+	ready_button.addEventListener('click', function () {
+		socket.emit('game start');
+	})
+
+
+
+
+	//odbieranie potasowanej talii
+	socket.on('hand', function (hand) {
+		for (x in hand) {
+			myHand.push(new Card(hand[x].rank, hand[x].suit))
+		}
+		for (var i = 0; i < 5; i++) {
+			var card = ranks[myHand[i].rank] + suits[myHand[i].suit]
+			player_cards[i].innerHTML = '<img src="PNG/' + card + '.png" height="297" width="198">'
+			opponent_cards[i].innerHTML = '<img src="PNG/red_back.png" height="297" width="198">'
+		}
+		//socket.emit('chat message', hand[0].rank + " " + hand[0].suit);
+
+		var swapDiv = document.getElementById('swapDiv')
+		swapDiv.innerHTML = "<button id='swapButton'>SWAP</button>"
+		var swapButton = document.getElementById('swapButton')
+
+		for (var x = 0; x < player_cards.length; x++) {
+			player_cards[x].addEventListener('click', function () {
+				if (!this.style.backgroundColor)
+					this.style.backgroundColor = 'red';
+				else this.style.backgroundColor = ''
+			})
+		}
+		swapButton.addEventListener('click', function () {
+			for (var i = 0; i < player_cards.length; i++) {
+				if (player_cards[i].style.backgroundColor == 'red') {
+					swapIndexes.push(i);
+				}
+			}
+			socket.emit('swapCards', swapIndexes)
+			swapDiv.innerHTML = '';
+		})
+	});
+
+	socket.on('getCards', function (cards) {
+		if (swapIndexes) {
+			for (var i = 0; i < cards.length; i++) {
+				var handAfterSwap = ranks[cards[i].rank] + suits[cards[i].suit]
+				player_cards[i].innerHTML = '<img src="PNG/' + handAfterSwap + '.png" height="297" width="198">'
+			}
+		}
+	})
+
+	socket.on('getOppCards', function (oppCards) {
+		console.log("Recieve opp cards")
+		for (var i = 0; i < oppCards.length; i++) {
+				var handAfterSwap = ranks[oppCards[i].rank] + suits[oppCards[i].suit]
+				opponent_cards[i].innerHTML = '<img src="PNG/' + handAfterSwap + '.png" height="297" width="198">'
+			}
+	})
+
+
+</script>
+
+</html>
