@@ -36,13 +36,7 @@ var ranks = [null, "A", "2", "3", "4", "5", "6",
 
 var deck = [];
 
-var index = 0;
-for (var suit = 0; suit <= 3; suit++) {
-	for (var rank = 1; rank <= 13; rank++) {
-		deck[index] = new Card(rank, suit);
-		index++;
-	}
-}
+
 
 var i = 1;
 var rozmowa = [];
@@ -108,13 +102,12 @@ io.on('connection', function (socket) {
 			else if (players[1] == undefined) {
 				players[1] = socket;
 
+				newDeck();
 				//rozdanie
 				hands = rozdanie(deck);
 				io.emit('chat message', "Gra: " + info(players[0]) + " vs " + info(players[1]))
 				players[0].emit('hand', hands[0]);
 				players[1].emit('hand', hands[1]);
-
-				
 			}
 	})
 
@@ -140,14 +133,13 @@ io.on('connection', function (socket) {
 
 			players[0].emit('getOppCards', hands[1]);
 			players[1].emit('getOppCards', hands[0]);
+
+			players.length = 0;
+			hands.length = 0;
+			count = 0;
+
 		}
 	})
-
-
-
-
-
-	
 
 	socket.on('reset', function (msg) {
 		rozmowa = [];
@@ -198,8 +190,20 @@ function getCards(talia, n) {
 	return cards;
 }
 
-server.listen(1111);
+server.listen(1112);
 
 function info(player) {
 	return player.nick + " (" + player.id + ")";
+}
+
+function newDeck(){
+	deck = [];
+	var index = 0;
+	for (var suit = 0; suit <= 3; suit++) {
+		for (var rank = 1; rank <= 13; rank++) {
+			deck[index] = new Card(rank, suit);
+			index++;
+		}
+
+	}
 }
